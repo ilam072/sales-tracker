@@ -40,6 +40,30 @@ func (r *ItemRepo) CreateItem(ctx context.Context, item domain.Item) (int, error
 	return id, nil
 }
 
+func (r *ItemRepo) GetItemByID(ctx context.Context, id int) (domain.Item, error) {
+	query := `
+        SELECT id, category_id, type, amount, description, created_at, transaction_date
+        FROM items
+        WHERE id = $1;
+    `
+	var item domain.Item
+	if err := r.db.QueryRowContext(ctx, query, id).Scan(
+		&item.Id,
+		&item.CategoryId,
+		&item.Type,
+		&item.Amount,
+		&item.Description,
+		&item.CreatedAt,
+		&item.TransactionDate,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.Item{}, errutils.Wrap("failed to get item by id", repo.ErrItemNotFound)
+		}
+		return domain.Item{}, errutils.Wrap("failed to get item by id", err)
+	}
+	return item, nil
+}
+
 func (r *ItemRepo) GetAllItems(ctx context.Context, from, to *time.Time, categoryID *int, itemType *domain.ItemType) ([]domain.Item, error) {
 	query := `
         SELECT id, category_id, type, amount, description, created_at, transaction_date
@@ -99,30 +123,6 @@ func (r *ItemRepo) GetAllItems(ctx context.Context, from, to *time.Time, categor
 	}
 
 	return items, nil
-}
-
-func (r *ItemRepo) GetItemByID(ctx context.Context, id int) (domain.Item, error) {
-	query := `
-        SELECT id, category_id, type, amount, description, created_at, transaction_date
-        FROM items
-        WHERE id = $1;
-    `
-	var item domain.Item
-	if err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&item.Id,
-		&item.CategoryId,
-		&item.Type,
-		&item.Amount,
-		&item.Description,
-		&item.CreatedAt,
-		&item.TransactionDate,
-	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Item{}, errutils.Wrap("failed to get item by id", repo.ErrItemNotFound)
-		}
-		return domain.Item{}, errutils.Wrap("failed to get item by id", err)
-	}
-	return item, nil
 }
 
 func (r *ItemRepo) UpdateItem(ctx context.Context, item domain.Item) error {
