@@ -1,8 +1,8 @@
 package db
 
 import (
-	"event-booker/internal/config"
 	"fmt"
+	"github.com/ilam072/sales-tracker/internal/config"
 	"github.com/wb-go/wbf/dbpg"
 )
 
