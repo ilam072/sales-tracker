@@ -7,7 +7,7 @@ CREATE TABLE categories
 
 CREATE TYPE transaction_type AS ENUM ('income', 'expense');
 
-CREATE TABLE transactions
+CREATE TABLE items
 (
     id SERIAL PRIMARY KEY,
     category_id INT REFERENCES categories(id) ON DELETE SET NULL,
