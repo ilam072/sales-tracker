@@ -22,6 +22,10 @@ type Item struct {
 	repo ItemRepo
 }
 
+func New(repo ItemRepo) *Item {
+	return &Item{repo: repo}
+}
+
 func (i *Item) CreateItem(ctx context.Context, item dto.CreateItem) (int, error) {
 	const op = "service.item.Create"
 
