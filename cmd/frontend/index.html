@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SalesTracker — UI</title>
+    <style>
+        :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color: #111; }
+        body { margin: 0; padding: 20px; background:#f7f8fa; }
+        h1 { margin: 0 0 12px 0; font-size: 20px; }
+        .grid { display: grid; gap: 16px; grid-template-columns: 320px 1fr; }
+        .card { background:white; border-radius:10px; padding:12px; box-shadow:0 1px 4px rgba(16,24,40,0.06); }
+        label { display:block; font-size:13px; margin-top:8px; }
+        input[type="text"], input[type="date"], input[type="number"], select, textarea {
+            width:100%; padding:8px; border:1px solid #e6e9ef; border-radius:6px; box-sizing:border-box; margin-top:6px;
+        }
+        textarea { min-height:64px; resize:vertical; }
+        button { padding:8px 12px; border-radius:8px; border:0; cursor:pointer; background:#0b5fff; color:white; }
+        button.ghost { background:#eef2ff; color:#0b5fff; border:1px solid #e6e9ef; }
+        .muted { color:#6b7280; font-size:13px; }
+        .toolbar { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+        table { width:100%; border-collapse:collapse; font-size:14px; }
+        th, td { text-align:left; padding:8px 6px; border-bottom:1px solid #f0f1f6; }
+        th { font-size:13px; color:#374151; }
+        .flex { display:flex; gap:8px; align-items:center; }
+        .analytics { display:flex; gap:12px; flex-wrap:wrap; }
+        .metric { background:#fff; padding:10px; border-radius:8px; min-width:120px; text-align:center; box-shadow:0 1px 3px rgba(16,24,40,0.04); }
+        .metric .value { font-weight:700; font-size:18px; }
+        .chart-wrap { background:white; padding:8px; border-radius:8px; }
+        .small { font-size:12px; color:#6b7280; }
+        .note { font-size:12px; color:#6b7280; margin-top:8px; }
+    </style>
+</head>
+<body>
+<h1>SalesTracker — интерфейс</h1>
+
+<div class="grid">
+    <!-- left column: forms -->
+    <div>
+        <div class="card">
+            <strong>Добавить категорию</strong>
+            <label>Название
+                <input id="cat-name" type="text" placeholder="Например, Food" />
+            </label>
+            <div style="margin-top:10px">
+                <button id="btn-add-cat">Добавить</button>
+                <button id="btn-refresh-cats" class="ghost">Обновить</button>
+            </div>
+            <div id="cat-msg" class="muted note"></div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+            <strong>Добавить запись (item)</strong>
+            <label>Категория
+                <select id="item-category"></select>
+            </label>
+            <label>Тип
+                <select id="item-type">
+                    <option value="income">income</option>
+                    <option value="expense">expense</option>
+                </select>
+            </label>
+            <label>Сумма
+                <input id="item-amount" type="number" step="0.01" placeholder="123.45" />
+            </label>
+            <label>Описание
+                <input id="item-desc" type="text" placeholder="Коротко..." />
+            </label>
+            <label>Дата (YYYY-MM-DD)
+                <input id="item-date" type="date" />
+            </label>
+            <div style="margin-top:10px">
+                <button id="btn-add-item">Добавить запись</button>
+                <button id="btn-clear-item" class="ghost">Очистить</button>
+            </div>
+            <div id="item-msg" class="muted note"></div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+            <strong>Фильтры (список записей)</strong>
+            <label>from
+                <input id="f-from" type="date" />
+            </label>
+            <label>to
+                <input id="f-to" type="date" />
+            </label>
+            <label>category
+                <select id="f-category"><option value="">— все —</option></select>
+            </label>
+            <label>type
+                <select id="f-type">
+                    <option value="">— все —</option>
+                    <option value="income">income</option>
+                    <option value="expense">expense</option>
+                </select>
+            </label>
+            <div style="margin-top:10px" class="flex">
+                <button id="btn-apply-filters">Показать</button>
+                <button id="btn-reset-filters" class="ghost">Сброс</button>
+                <button id="btn-export-csv" class="ghost">Экспорт CSV</button>
+            </div>
+            <div id="filter-msg" class="muted note"></div>
+        </div>
+
+    </div>
+
+    <!-- right column: table + analytics -->
+    <div>
+        <div class="card">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong>Записи</strong>
+                <div class="small muted">Параметры: ?from=YYYY-MM-DD&amp;to=YYYY-MM-DD&amp;category_id=&amp;type=</div>
+            </div>
+
+            <div style="margin-top:8px; overflow:auto; max-height:360px;">
+                <table id="items-table">
+                    <thead><tr><th>#</th><th>Дата</th><th>Категория</th><th>Тип</th><th>Сумма</th><th>Описание</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div class="muted small">Всего: <span id="items-count">0</span></div>
+                <div>
+                    <button id="btn-refresh-items" class="ghost">Обновить</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+            <strong>Аналитика (по текущим фильтрам)</strong>
+            <div class="note">Нажми "Показать" в фильтрах, затем — «Обновить аналитику»</div>
+            <div style="margin-top:8px" class="analytics">
+                <div class="metric"><div class="small">SUM</div><div id="m-sum" class="value">—</div></div>
+                <div class="metric"><div class="small">AVG</div><div id="m-avg" class="value">—</div></div>
+                <div class="metric"><div class="small">COUNT</div><div id="m-count" class="value">—</div></div>
+                <div class="metric"><div class="small">MEDIAN</div><div id="m-median" class="value">—</div></div>
+                <div class="metric"><div class="small">90%</div><div id="m-p90" class="value">—</div></div>
+            </div>
+
+            <div style="margin-top:10px; display:flex; gap:8px;">
+                <button id="btn-refresh-analytics">Обновить аналитику</button>
+                <button id="btn-draw-chart" class="ghost">Нарисовать график</button>
+            </div>
+
+            <div style="margin-top:12px" class="chart-wrap">
+                <canvas id="chart" width="800" height="200" style="width:100%; height:200px;"></canvas>
+                <div class="note">График сумм по датам (локально, из GET /items)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const apiBase = 'http://localhost:8080/api';
+        // elements
+        const el = id => document.getElementById(id);
+        const catName = el('cat-name');
+        const btnAddCat = el('btn-add-cat');
+        const btnRefreshCats = el('btn-refresh-cats');
+        const catMsg = el('cat-msg');
+
+        const itemCategory = el('item-category');
+        const itemType = el('item-type');
+        const itemAmount = el('item-amount');
+        const itemDesc = el('item-desc');
+        const itemDate = el('item-date');
+        const btnAddItem = el('btn-add-item');
+        const btnClearItem = el('btn-clear-item');
+        const itemMsg = el('item-msg');
+
+        const fFrom = el('f-from');
+        const fTo = el('f-to');
+        const fCategory = el('f-category');
+        const fType = el('f-type');
+        const btnApplyFilters = el('btn-apply-filters');
+        const btnResetFilters = el('btn-reset-filters');
+        const btnExportCsv = el('btn-export-csv');
+        const filterMsg = el('filter-msg');
+
+        const itemsTableBody = document.querySelector('#items-table tbody');
+        const itemsCount = el('items-count');
+        const btnRefreshItems = el('btn-refresh-items');
+
+        const mSum = el('m-sum'), mAvg = el('m-avg'), mCount = el('m-count'), mMedian = el('m-median'), mP90 = el('m-p90');
+        const btnRefreshAnalytics = el('btn-refresh-analytics'), btnDrawChart = el('btn-draw-chart');
+        const canvas = el('chart'); const ctx = canvas.getContext('2d');
+
+        // in-memory storage
+        let categories = []; // [{name}]
+        let items = []; // loaded items from GET /items (dto.Items.Items)
+        let currentFilters = { from: null, to: null, category_id: null, type: null };
+
+        // helpers
+        function fmtDateISO(d) {
+            // d is Date object or date string; return YYYY-MM-DD
+            const dt = (d instanceof Date) ? d : new Date(d);
+            if (isNaN(dt)) return '';
+            return dt.toISOString().slice(0,10);
+        }
+
+        function showMsg(elm, text, timeout=3000) {
+            elm.textContent = text;
+            if (!text) return;
+            setTimeout(()=> { if (elm.textContent === text) elm.textContent = ''; }, timeout);
+        }
+
+        async function apiFetch(path, opts) {
+            try {
+                const res = await fetch(apiBase + path, opts);
+                const ct = res.headers.get('content-type') || '';
+                const body = ct.includes('application/json') ? await res.json() : await res.text();
+                if (!res.ok) throw { status: res.status, body };
+                return body;
+            } catch (err) {
+                throw err;
+            }
+        }
+
+        // categories
+        async function loadCategories() {
+            try {
+                const data = await apiFetch('/categories');
+                // data: { categories: [ {name} ] }
+                categories = data.categories || [];
+                // fill selects
+                itemCategory.innerHTML = '';
+                fCategory.innerHTML = '<option value="">— все —</option>';
+                categories.forEach((c, i) => {
+                    // we don't have category IDs from API in your DTO — only name.
+                    // But server expects category_id int. If your real API returns id, adapt this block.
+                    // Try to handle both shapes: {id, name} or {name}
+                    const id = c.id; // fallback index -> NOT ideal; prefer server to return id.
+                    const name = c.name;
+                    const opt = document.createElement('option'); opt.value = id; opt.textContent = name;
+                    itemCategory.appendChild(opt);
+                    const opt2 = opt.cloneNode(true);
+                    fCategory.appendChild(opt2);
+                });
+                showMsg(catMsg, 'Категории загружены', 1200);
+            } catch (err) {
+                console.error('loadCategories', err);
+                showMsg(catMsg, 'Не удалось загрузить категории');
+            }
+        }
+
+        async function createCategory() {
+            const name = catName.value.trim();
+            if (!name) { showMsg(catMsg, 'Введите имя категории'); return; }
+            try {
+                const body = { name };
+                const res = await apiFetch('/categories', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) });
+                showMsg(catMsg, 'Категория добавлена');
+                catName.value = '';
+                // refresh categories
+                await loadCategories();
+            } catch (err) {
+                console.error('createCategory', err);
+                if (err && err.status === 409) showMsg(catMsg, 'Категория уже существует');
+                else showMsg(catMsg, 'Ошибка при добавлении категории');
+            }
+        }
+
+        // items
+        function validateItemInput() {
+            if (!itemCategory.value) return 'Выберите категорию';
+            if (!itemAmount.value || isNaN(Number(itemAmount.value))) return 'Введите сумму';
+            if (!itemType.value) return 'Выберите тип';
+            return null;
+        }
+
+        async function createItem() {
+            const v = validateItemInput();
+            if (v) { showMsg(itemMsg, v); return; }
+
+            const payload = {
+                category_id: Number(itemCategory.value),
+                type: itemType.value,
+                amount: Number(itemAmount.value),
+                description: itemDesc.value,
+                // transaction_date should be YYYY-MM-DD; if empty omit or set today
+                transaction_date: itemDate.value ? itemDate.value : undefined
+            };
+
+            try {
+                const res = await apiFetch('/items', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload) });
+                showMsg(itemMsg, 'Запись добавлена');
+                // clear
+                itemAmount.value=''; itemDesc.value=''; itemDate.value='';
+                await loadItems(); // refresh list
+            } catch (err) {
+                console.error('createItem', err);
+                if (err && err.status === 404) showMsg(itemMsg, 'Категория не найдена');
+                else showMsg(itemMsg, 'Ошибка при добавлении записи');
+            }
+        }
+
+        // list items: uses currentFilters
+        function buildItemsQuery() {
+            const parts = [];
+            if (currentFilters.from) parts.push('from=' + encodeURIComponent(currentFilters.from));
+            if (currentFilters.to) parts.push('to=' + encodeURIComponent(currentFilters.to));
+            if (currentFilters.category_id) parts.push('category_id=' + encodeURIComponent(currentFilters.category_id));
+            if (currentFilters.type) parts.push('type=' + encodeURIComponent(currentFilters.type));
+            return parts.length ? ('?' + parts.join('&')) : '';
+        }
+
+        async function loadItems() {
+            try {
+                const q = buildItemsQuery();
+                const data = await apiFetch('/items' + q);
+                // data: { items: [ {category_id, type, amount, description, transaction_date} ] }
+                items = data.items || [];
+                renderItemsTable();
+            } catch (err) {
+                console.error('loadItems', err);
+                showMsg(filterMsg, 'Не удалось загрузить записи');
+            }
+        }
+
+        function renderItemsTable() {
+            itemsTableBody.innerHTML = '';
+            items.forEach((it, idx) => {
+                const tr = document.createElement('tr');
+                const dateStr = it.transaction_date ? it.transaction_date.slice(0,10) : '';
+                tr.innerHTML = `<td>${idx+1}</td>
+                      <td>${dateStr}</td>
+                      <td>${escapeHtml(getCategoryNameById(it.category_id) || it.category_id)}</td>
+                      <td>${escapeHtml(it.type)}</td>
+                      <td>${escapeHtml(Number(it.amount).toFixed(2))}</td>
+                      <td>${escapeHtml(it.description || '')}</td>`;
+                itemsTableBody.appendChild(tr);
+            });
+            itemsCount.textContent = items.length;
+        }
+
+        function getCategoryNameById(id) {
+            // categories might not have ids in DTO; try to match by id property or by index
+            // If server returns categories with id fields, this will work.
+            const found = categories.find(c => Number(c.id) === Number(id));
+            if (found) return found.name;
+            // fallback: if server returned only names and item.category_id was numeric index (unlikely),
+            // try using index-1
+            if (categories[Number(id)-1]) return categories[Number(id)-1].name;
+            return null;
+        }
+
+        // CSV export
+        function exportCSV() {
+            if (!items || items.length === 0) { showMsg(filterMsg,'Нет данных для экспорта'); return; }
+            const header = ['category_id','type','amount','description','transaction_date'];
+            const rows = items.map(it => [
+                it.category_id,
+                it.type,
+                it.amount,
+                `"${(it.description||'').replace(/"/g,'""')}"`,
+                it.transaction_date ? it.transaction_date.slice(0,10) : ''
+            ].join(','));
+            const csv = [header.join(','), ...rows].join('\n');
+            const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'items.csv'; document.body.appendChild(a); a.click();
+            a.remove(); URL.revokeObjectURL(url);
+        }
+
+        // analytics
+        async function refreshAnalytics() {
+            try {
+                const q = buildItemsQuery();
+                const sum = await apiFetch('/analytics/sum' + q);
+                const avg = await apiFetch('/analytics/avg' + q);
+                const count = await apiFetch('/analytics/count' + q);
+                const median = await apiFetch('/analytics/median' + q);
+                const p90 = await apiFetch('/analytics/percentile' + q);
+
+                mSum.textContent = formatNumber(sum.sum ?? sum); // server returns {sum: value}
+                mAvg.textContent = formatNumber(avg.average ?? avg); // guard
+                mCount.textContent = (count.count !== undefined) ? count.count : (count); // server returns {count: n}
+                mMedian.textContent = formatNumber(median.median ?? median);
+                mP90.textContent = formatNumber(p90.percentile_90 ?? p90);
+            } catch (err) {
+                console.error('refreshAnalytics', err);
+                showMsg(filterMsg, 'Не удалось получить аналитику');
+            }
+        }
+
+        function formatNumber(v) {
+            if (v === null || v === undefined) return '—';
+            if (typeof v === 'number') return Number(v).toFixed(2);
+            // if server returns object like { sum: 123 }, we handled earlier
+            return String(v);
+        }
+
+        // chart: group items by date and draw simple line
+        function drawChart() {
+            // prepare data: date -> sum
+            const byDate = {};
+            items.forEach(it => {
+                const d = it.transaction_date ? it.transaction_date.slice(0,10) : '';
+                if (!d) return;
+                byDate[d] = (byDate[d] || 0) + Number(it.amount || 0);
+            });
+            const dates = Object.keys(byDate).sort();
+            const values = dates.map(d => byDate[d]);
+
+            // clear
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            if (dates.length === 0) {
+                ctx.fillStyle = '#6b7280'; ctx.font = '14px sans-serif'; ctx.fillText('Нет данных для графика', 10, 30);
+                return;
+            }
+
+            // scales
+            const padding = 30;
+            const w = canvas.width - padding*2;
+            const h = canvas.height - padding*2;
+            const max = Math.max(...values);
+            const min = Math.min(...values);
+
+            // draw axes
+            ctx.strokeStyle = '#e6e9ef';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, padding + h);
+            ctx.lineTo(padding + w, padding + h);
+            ctx.stroke();
+
+            // draw line
+            ctx.strokeStyle = '#0b5fff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            values.forEach((v, idx) => {
+                const x = padding + (w * idx / Math.max(1, dates.length - 1));
+                const y = padding + h - ((v - min) / Math.max(1, (max - min)) * h || 0);
+                if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // points
+            ctx.fillStyle = '#0b5fff';
+            values.forEach((v, idx) => {
+                const x = padding + (w * idx / Math.max(1, dates.length - 1));
+                const y = padding + h - ((v - min) / Math.max(1, (max - min)) * h || 0);
+                ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI*2); ctx.fill();
+            });
+
+            // labels (x)
+            ctx.fillStyle = '#374151'; ctx.font = '12px sans-serif';
+            const step = Math.ceil(dates.length / 6);
+            dates.forEach((d, idx) => {
+                if (idx % step !== 0 && idx !== dates.length -1) return;
+                const x = padding + (w * idx / Math.max(1, dates.length - 1));
+                ctx.fillText(d, x - 30, padding + h + 16);
+            });
+        }
+
+        // utilities
+        function escapeHtml(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        // events
+        btnAddCat.addEventListener('click', createCategory);
+        btnRefreshCats.addEventListener('click', loadCategories);
+
+        btnAddItem.addEventListener('click', createItem);
+        btnClearItem.addEventListener('click', ()=> { itemAmount.value=''; itemDesc.value=''; itemDate.value=''; });
+
+        btnApplyFilters.addEventListener('click', ()=>{
+            currentFilters.from = fFrom.value || null;
+            currentFilters.to = fTo.value || null;
+            currentFilters.category_id = fCategory.value || null;
+            currentFilters.type = fType.value || null;
+            loadItems();
+        });
+
+        btnResetFilters.addEventListener('click', ()=>{
+            fFrom.value=''; fTo.value=''; fCategory.value=''; fType.value='';
+            currentFilters = { from:null, to:null, category_id:null, type:null };
+            loadItems();
+        });
+
+        btnExportCsv.addEventListener('click', exportCSV);
+        btnRefreshItems.addEventListener('click', loadItems);
+        btnRefreshAnalytics.addEventListener('click', refreshAnalytics);
+        btnDrawChart.addEventListener('click', drawChart);
+
+        // init
+        (async function init(){
+            // try to set today's date default for new items
+            const today = new Date().toISOString().slice(0,10);
+            itemDate.value = today;
+            fTo.value = today;
+            fFrom.value = ''; // leave open
+
+            await loadCategories();
+            await loadItems();
+            await refreshAnalytics();
+            drawChart();
+        })();
+
+    })();
+</script>
+</body>
+</html>
