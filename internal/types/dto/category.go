@@ -5,6 +5,7 @@ type CreateCategory struct {
 }
 
 type GetCategory struct {
+	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 

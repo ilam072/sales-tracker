@@ -54,7 +54,7 @@ func (c *Category) GetCategoryByID(ctx context.Context, id int) (dto.GetCategory
 		return dto.GetCategory{}, errutils.Wrap(op, err)
 	}
 
-	return dto.GetCategory{Name: category.Name}, nil
+	return dto.GetCategory{ID: category.ID, Name: category.Name}, nil
 }
 
 func (c *Category) GetAllCategories(ctx context.Context) (dto.Categories, error) {
@@ -72,6 +72,7 @@ func (c *Category) GetAllCategories(ctx context.Context) (dto.Categories, error)
 	result := make([]dto.GetCategory, 0, len(categories))
 	for _, cat := range categories {
 		result = append(result, dto.GetCategory{
+			ID:   cat.ID,
 			Name: cat.Name,
 		})
 	}
