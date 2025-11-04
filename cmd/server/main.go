@@ -12,6 +12,7 @@ import (
 	itemrepo "github.com/ilam072/sales-tracker/internal/item/repo/postgres"
 	itemrest "github.com/ilam072/sales-tracker/internal/item/rest"
 	itemservice "github.com/ilam072/sales-tracker/internal/item/service"
+	"github.com/ilam072/sales-tracker/internal/middlewares"
 	"github.com/ilam072/sales-tracker/internal/validator"
 	"github.com/ilam072/sales-tracker/pkg/db"
 	"github.com/wb-go/wbf/ginext"
@@ -61,6 +62,7 @@ func main() {
 	engine := ginext.New("")
 	engine.Use(ginext.Logger())
 	engine.Use(ginext.Recovery())
+	engine.Use(middlewares.CORS())
 
 	api := engine.Group("/api")
 
@@ -74,16 +76,16 @@ func main() {
 	// items
 	api.POST("/items", itemHandler.CreateItem)
 	api.GET("/items/:id", itemHandler.GetItemByID)
-	api.GET("/items", itemHandler.GetAllItems)
+	api.GET("/items", itemHandler.GetAllItems) // query параметры ?from=...&to=...&category_id=...&type=...
 	api.PUT("/items/:id", itemHandler.UpdateItem)
 	api.DELETE("/items/:id", itemHandler.DeleteItem)
 
 	// analytics
-	api.GET("/analytics/sum", analyticsHandler.Sum)
-	api.GET("/analytics/avg", analyticsHandler.Avg)
-	api.GET("/analytics/count", analyticsHandler.Count)
-	api.GET("/analytics/median", analyticsHandler.Median)
-	api.GET("/analytics/percentile", analyticsHandler.PercentileNinetieth)
+	api.GET("/analytics/sum", analyticsHandler.Sum)                        // query параметры ?from=...&to=...&category_id=...&type=...
+	api.GET("/analytics/avg", analyticsHandler.Avg)                        // query параметры ?from=...&to=...&category_id=...&type=...
+	api.GET("/analytics/count", analyticsHandler.Count)                    // query параметры ?from=...&to=...&category_id=...&type=...
+	api.GET("/analytics/median", analyticsHandler.Median)                  // query параметры ?from=...&to=...&category_id=...&type=...
+	api.GET("/analytics/percentile", analyticsHandler.PercentileNinetieth) // query параметры ?from=...&to=...&category_id=...&type=...
 
 	// Initialize and start http server
 	server := &http.Server{
