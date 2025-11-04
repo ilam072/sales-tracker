@@ -29,9 +29,9 @@ func New(repo ItemRepo) *Item {
 func (i *Item) CreateItem(ctx context.Context, item dto.CreateItem) (int, error) {
 	const op = "service.item.Create"
 
-	transactionDate := item.TransactionDate
-	if transactionDate.IsZero() {
-		transactionDate = time.Now()
+	transactionDate, err := time.Parse(time.DateOnly, item.TransactionDate)
+	if err != nil {
+		return 0, errutils.Wrap(op, err)
 	}
 
 	domainItem := domain.Item{
@@ -66,7 +66,7 @@ func (i *Item) GetItemByID(ctx context.Context, id int) (dto.GetItem, error) {
 		Type:            string(item.Type),
 		Amount:          item.Amount,
 		Description:     item.Description,
-		TransactionDate: item.TransactionDate,
+		TransactionDate: item.TransactionDate.String(),
 	}, nil
 }
 
@@ -95,7 +95,7 @@ func (i *Item) GetAllItems(ctx context.Context, from, to *time.Time, categoryID 
 			Type:            string(item.Type),
 			Amount:          item.Amount,
 			Description:     item.Description,
-			TransactionDate: item.TransactionDate,
+			TransactionDate: item.TransactionDate.String(),
 		})
 	}
 
@@ -105,9 +105,9 @@ func (i *Item) GetAllItems(ctx context.Context, from, to *time.Time, categoryID 
 func (i *Item) UpdateItem(ctx context.Context, id int, item dto.UpdateItem) error {
 	const op = "service.item.Update"
 
-	transactionDate := item.TransactionDate
-	if transactionDate.IsZero() {
-		transactionDate = time.Now()
+	transactionDate, err := time.Parse(time.DateOnly, item.TransactionDate)
+	if err != nil {
+		return errutils.Wrap(op, err)
 	}
 
 	domainItem := domain.Item{

@@ -49,10 +49,22 @@ func (h *ItemHandler) CreateItem(c *ginext.Context) {
 		return
 	}
 
-	// Если дата транзакции не указана — ставим текущую
-	if item.TransactionDate.IsZero() {
-		item.TransactionDate = time.Now().UTC()
+	var (
+		err             error
+		transactionDate time.Time
+	)
+	if item.TransactionDate == "" {
+		transactionDate = time.Now().UTC()
+	} else {
+		transactionDate, err = time.Parse(time.DateOnly, item.TransactionDate)
+		if err != nil {
+			zlog.Logger.Error().Err(err).Msg("failed to parse transaction_date")
+			response.Error("invalid 'transaction_date' format, expected YYYY-MM-DD").WriteJSON(c, http.StatusBadRequest)
+			return
+		}
 	}
+
+	item.TransactionDate = transactionDate.Format(time.DateOnly)
 
 	ID, err := h.item.CreateItem(c.Request.Context(), item)
 	if err != nil {
@@ -61,7 +73,7 @@ func (h *ItemHandler) CreateItem(c *ginext.Context) {
 			response.Error("category not found").WriteJSON(c, http.StatusNotFound)
 			return
 		}
-		zlog.Logger.Error().Err(err).Msg("failed to create item")
+		zlog.Logger.Error().Err(err).Any("category_id", item.CategoryId).Msg("failed to create item")
 		response.Error("internal server error, try again later").WriteJSON(c, http.StatusInternalServerError)
 		return
 	}
@@ -172,9 +184,19 @@ func (h *ItemHandler) UpdateItem(c *ginext.Context) {
 		return
 	}
 
-	if item.TransactionDate.IsZero() {
-		item.TransactionDate = time.Now().UTC()
+	var transactionDate time.Time
+	if item.TransactionDate == "" {
+		transactionDate = time.Now().UTC()
+	} else {
+		transactionDate, err = time.Parse(time.DateOnly, item.TransactionDate)
+		if err != nil {
+			zlog.Logger.Error().Err(err).Msg("failed to parse transaction_date")
+			response.Error("invalid 'transaction_date' format, expected YYYY-MM-DD").WriteJSON(c, http.StatusBadRequest)
+			return
+		}
 	}
+
+	item.TransactionDate = transactionDate.Format(time.DateOnly)
 
 	err = h.item.UpdateItem(c.Request.Context(), id, item)
 	if err != nil {
