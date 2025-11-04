@@ -7,6 +7,7 @@ import (
 	"github.com/ilam072/sales-tracker/internal/category/repo"
 	"github.com/ilam072/sales-tracker/internal/types/domain"
 	"github.com/ilam072/sales-tracker/pkg/errutils"
+	"github.com/lib/pq"
 	"github.com/wb-go/wbf/dbpg"
 )
 
@@ -14,7 +15,7 @@ type CategoryRepo struct {
 	db *dbpg.DB
 }
 
-func NewCategoryRepo(db *dbpg.DB) *CategoryRepo {
+func New(db *dbpg.DB) *CategoryRepo {
 	return &CategoryRepo{db: db}
 }
 
@@ -27,6 +28,9 @@ func (r *CategoryRepo) CreateCategory(ctx context.Context, category domain.Categ
 
 	var id int
 	if err := r.db.QueryRowContext(ctx, query, category.Name).Scan(&id); err != nil {
+		if isUniqueViolation(err) {
+			return 0, errutils.Wrap("failed to create category", repo.ErrCategoryExists)
+		}
 		return 0, errutils.Wrap("failed to create category", err)
 	}
 
@@ -126,4 +130,9 @@ func (r *CategoryRepo) DeleteCategory(ctx context.Context, id int) error {
 	}
 
 	return nil
+}
+
+func isUniqueViolation(err error) bool {
+	var pqErr *pq.Error
+	return errors.As(err, &pqErr) && pqErr.Code == "23505"
 }

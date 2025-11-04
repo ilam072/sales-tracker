@@ -21,6 +21,10 @@ type Category struct {
 	repo CategoryRepo
 }
 
+func New(repo CategoryRepo) *Category {
+	return &Category{repo: repo}
+}
+
 func (c *Category) SaveCategory(ctx context.Context, category dto.CreateCategory) (int, error) {
 	const op = "service.category.Save"
 
@@ -30,7 +34,10 @@ func (c *Category) SaveCategory(ctx context.Context, category dto.CreateCategory
 
 	ID, err := c.repo.CreateCategory(ctx, domainCategory)
 	if err != nil {
-		return 0, errutils.Wrap(op, err)
+		if errors.Is(err, repo.ErrCategoryExists) {
+			return 0, errutils.Wrap("failed to create category", domain.ErrCategoryExists)
+		}
+		return 0, errutils.Wrap("failed to create category", err)
 	}
 
 	return ID, nil
